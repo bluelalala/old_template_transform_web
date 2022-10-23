@@ -1,6 +1,7 @@
 package com.example.old_template_transform_web;
 
 import com.aspose.words.*;
+import com.aspose.words.Font;
 import com.aspose.words.Shape;
 
 import java.awt.*;
@@ -12,8 +13,10 @@ public class TransformUtil {
 
     /**
      * 将域（被替换的值）转换为双括号形式，转换复选框
+     *
+     * @return
      */
-    public static byte[] procCustomDocument(InputStream stream) {
+    public static byte[] procCustomDocument(InputStream inputStream) {
         byte[] bytes = null;
         try {
             Class<?> aClass = Class.forName("com.aspose.words.zzXyu");
@@ -26,7 +29,7 @@ public class TransformUtil {
             zzYAC.set(null, new byte[]{76, 73, 67, 69, 78, 83, 69, 68});
 
             ByteArrayOutputStream os = new ByteArrayOutputStream();
-            Document doc = new Document(stream);
+            Document doc = new Document(inputStream);
 
             // 处理自定义域
             CustomDocumentProperties documentProperties = doc.getCustomDocumentProperties();
@@ -86,9 +89,11 @@ public class TransformUtil {
                 moveList.get(i).remove();
             }
 
-            removeHeader(doc);
+            removeHeaderFooter(doc);
 
             addHeader(doc);
+
+            addFooter(doc);
 
             doc.save(os, SaveFormat.DOCX);
             bytes = os.toByteArray();
@@ -99,7 +104,7 @@ public class TransformUtil {
         return bytes;
     }
 
-    static void removeHeader(Document doc) {
+    static void removeHeaderFooter(Document doc) {
         for (Section section : doc.getSections()) {
             HeaderFooter header;
             HeaderFooter footer;
@@ -116,6 +121,7 @@ public class TransformUtil {
                 header.remove();
             if (footer != null)
                 footer.remove();
+
             header = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.HEADER_EVEN);
             footer = section.getHeadersFooters().getByHeaderFooterType(HeaderFooterType.FOOTER_EVEN);
             if (header != null)
@@ -128,27 +134,12 @@ public class TransformUtil {
     static void addHeader(Document doc) throws Exception {
         // 文档构建工具类，可对当前加入的模板进行编辑、新增等部分功能。
         DocumentBuilder builder = new DocumentBuilder(doc);
-        // 设置除第一页外的页眉页脚
-        builder.getPageSetup().setDifferentFirstPageHeaderFooter(false);
-        // 设置奇数页和偶数页页眉页脚
-        builder.getPageSetup().setOddAndEvenPagesHeaderFooter(false);
-        // 2、开始插入页脚
-        // 将光标移动到页脚位置
+        // 将光标移动到页眉位置
         builder.moveToHeaderFooter(HeaderFooterType.HEADER_PRIMARY);
-        //靠右对齐
+        // 靠右对齐
         builder.getParagraphFormat().setAlignment(ParagraphAlignment.RIGHT);
-        //   设置页脚上下边距
-//        builder.getPageSetup().setHeaderDistance(40);
-//        builder.getPageSetup().setFooterDistance(0);
-
-
         Paragraph paragraph = builder.insertParagraph();
-
         Run run = new Run(doc, "{{qrCode_ewm}}");
-        // 字号小五
-//        run.getFont().setSize(9);
-//        run.getFont().setName("宋体");
-
         paragraph.appendChild(run);
 
         // 添加页眉线
@@ -158,8 +149,24 @@ public class TransformUtil {
         borderHeader.setLineStyle(LineStyle.SINGLE);
     }
 
+    static void addFooter(Document doc) throws Exception {
+        DocumentBuilder builder = new DocumentBuilder(doc);
+        for (int i = 0; i < doc.getSections().getCount(); i++) {
+            builder.moveToSection(i);
+            builder.moveToHeaderFooter(HeaderFooterType.FOOTER_PRIMARY);
+            builder.getCurrentParagraph().getParagraphFormat().setAlignment(ParagraphAlignment.CENTER);
+            builder.getFont().setName("宋体");
+            builder.getFont().setSize(9.0);
+            builder.insertField(FieldType.FIELD_PAGE, true);
+            builder.getPageSetup().setFooterDistance(35.0);
+        }
+    }
+
     /**
      * 将可编辑域转换为格式文本内容控件
+     *
+     * @param bytes
+     * @param path
      */
     public static void procEditAbleRange(byte[] bytes, String path) {
         try {
@@ -202,14 +209,18 @@ public class TransformUtil {
                             && (rangeEnd.getNextSibling() != null)) {
                         rangeEnd.getPreviousSibling().remove();
                         builder.moveTo(rangeEnd.getNextSibling());
-                        builder.insertNode(new Run(doc, "\f"));
-                    }
-
-                    if ((rangeEnd.getNextSibling() != null) && (rangeEnd.getNextSibling().getText().equals("\f"))
+                        Paragraph paragraph = builder.insertParagraph();
+                        Run run = new Run(doc,"\f");
+                        paragraph.prependChild(run);
+                        builder.moveTo(rangeEnd);
+                        builder.getCurrentSection().getBody().insertAfter(endTag, builder.getCurrentParagraph());
+                    } else if ((rangeEnd.getNextSibling() != null) && (rangeEnd.getNextSibling().getText().equals("\f"))
                             && (rangeEnd.getPreviousSibling() != null)) {
+                        rangeEnd.getNextSibling().remove();
                         builder.moveTo(rangeEnd.getNextSibling());
-                        builder.insertParagraph();
-
+                        Paragraph paragraph = builder.insertParagraph();
+                        Run run = new Run(doc,"\f");
+                        paragraph.prependChild(run);
                         builder.moveTo(rangeEnd);
                         builder.getCurrentSection().getBody().insertAfter(endTag, builder.getCurrentParagraph());
                     } else {
@@ -223,6 +234,10 @@ public class TransformUtil {
                                 ((currentNode.getNodeType() == NodeType.RUN) && (currentNode.getText().trim().isEmpty()))) {
                             currentNode = currentNode.getPreviousSibling();
                             while (currentNode == null) {
+                                if (currentPara.getPreviousSibling() == null) {
+                                    flag = true;
+                                    break;
+                                }
                                 if (currentPara.getPreviousSibling().getNodeType() == NodeType.TABLE) {
                                     flag = true;
                                     table = (Table) currentPara.getPreviousSibling();
@@ -277,6 +292,10 @@ public class TransformUtil {
                 }
             }
 
+            deleteTitleSpace(doc);
+
+            deleteEmptyPara(doc);
+
             addMsrList(doc, builder);
 
             handleSign(doc, builder);
@@ -291,6 +310,55 @@ public class TransformUtil {
             os.close();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    static void deleteTitleSpace(Document doc) {
+        Section section = doc.getFirstSection();
+        ParagraphCollection collection = section.getBody().getParagraphs();
+        for (int i = 0; i < collection.getCount(); i++) {
+            Paragraph paragraph = collection.get(i);
+            if (paragraph.getText().contains("商品房")) {
+                // 两个相连的空格
+                Run twoSpace = (Run) paragraph.getFirstChild();
+                Font font = twoSpace.getFont();
+                paragraph.getFirstChild().remove();
+                Run space = new Run(doc, " ");
+                space.getFont().setSize(font.getSize());
+                paragraph.prependChild(space);
+                break;
+            } else {
+                // 如果没有匹配到含有“商品房”字段的标题，则在扫描一定数量段落后跳出循环
+                if (i > 25) {
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * 删除目录页中最后的几个空白段落，不要删除分页符
+     *
+     * @param doc
+     */
+    static void deleteEmptyPara(Document doc) {
+        boolean flag = false;
+        Section section = doc.getFirstSection();
+        ParagraphCollection collection = section.getBody().getParagraphs();
+        for (int i = 0; i < collection.getCount(); i++) {
+            Paragraph paragraph = collection.get(i);
+            if (paragraph.getText().contains("章")) {
+                flag = true;
+            }
+            if (flag == true) {
+                if (paragraph.getText().equals("\r")) {
+                    paragraph.remove();
+                    i--;
+                }
+                if (paragraph.getText().contains("\f")) {
+                    break;
+                }
+            }
         }
     }
 
@@ -328,14 +396,42 @@ public class TransformUtil {
         }
     }
 
-    static void handleSign(Document doc, DocumentBuilder builder) {
+    static void handleSign(Document doc, DocumentBuilder builder) throws Exception {
         for (Section section : doc.getSections()) {
             ParagraphCollection collection = section.getBody().getParagraphs();
             for (int i = 0; i < collection.getCount(); i++) {
                 Paragraph paragraph = collection.get(i);
                 // 删除“网签日期：{{xddate}}”段落
                 if (paragraph.getText().contains("xddate")) {
+                    Paragraph currentPara = (Paragraph) paragraph.getPreviousSibling();
+                    currentPara.getParagraphFormat().setLeftIndent(70);
+                    Run run = new Run(doc);
+                    run.setText("_R{faren}                 ");
+                    run.getFont().setSize(12);
+                    run.getFont().setColor(Color.white);
+                    currentPara.prependChild(run);
+
+                    while (!currentPara.getText().contains("出卖人")) {
+                        currentPara = (Paragraph) currentPara.getPreviousSibling();
+                    }
+                    currentPara = (Paragraph) currentPara.getPreviousSibling();
+                    builder.moveTo(currentPara);
+                    Table table = builder.startTable();
+                    builder.insertCell();
+                    builder.getParagraphFormat().setAlignment(ParagraphAlignment.CENTER);
+                    builder.getCellFormat().getBorders().setColor(Color.white);
+                    builder.getFont().setColor(Color.white);
+                    builder.write("_R{seller}");
+                    builder.insertCell();
+                    builder.getParagraphFormat().setAlignment(ParagraphAlignment.RIGHT);
+                    builder.write("_R{buyer}");
+                    builder.endRow();
+                    builder.endTable();
+                    currentPara.remove();
+
                     paragraph.remove();
+
+                    break;
                 }
             }
         }

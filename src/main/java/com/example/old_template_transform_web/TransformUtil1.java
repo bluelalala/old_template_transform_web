@@ -9,7 +9,7 @@ import java.io.*;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 
-public class TransformUtil {
+public class TransformUtil1 {
 
     /**
      * 将域（被替换的值）转换为双括号形式，转换复选框
@@ -306,12 +306,6 @@ public class TransformUtil {
 
 //            addBuyer(doc, builder);
 
-            changeMsrName(doc);
-
-            addBookmark(doc);
-
-            solveDateHideProblem(doc);
-
             doc.save(os, SaveFormat.DOCX);
             os.close();
         } catch (Exception e) {
@@ -435,6 +429,8 @@ public class TransformUtil {
                     builder.endTable();
                     currentPara.remove();
 
+                    paragraph.remove();
+
                     break;
                 }
             }
@@ -498,94 +494,6 @@ public class TransformUtil {
                             builder.insertNode(run);
                         }
                     }
-                }
-            }
-        }
-    }
-
-    /**
-     * 文档中有两个{{ms_name}}，将第一个{{ms_name}}替换为{{ms_names}}
-     */
-    static void changeMsrName(Document doc) {
-        try {
-            FindReplaceOptions options = new FindReplaceOptions();
-            options.setReplacingCallback(new ReplaceFirstCallback());
-            doc.getRange().replace("{{ms_name}}", "{{ms_names}}", options);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    static class ReplaceFirstCallback implements IReplacingCallback {
-        private boolean firstMatch = true;
-        // 只有第一次匹配到进行替换，之后匹配到则不替换
-        public int replacing(ReplacingArgs e) {
-            if (firstMatch) {
-                e.setReplacement("{{ms_names}}");
-                firstMatch = false;
-                return ReplaceAction.REPLACE;
-            }
-            return ReplaceAction.SKIP;
-        }
-    }
-
-    /**
-     * 在文档中找到“网签日期：{{xddate}}”将{{xddate}}删除，在删除位置添加一个名为“dtag_xydate”的书签
-     */
-    static void addBookmark(Document doc) {
-        try {
-            for (Field field : doc.getRange().getFields()) {
-                // 查找包含"xddate"字段的域
-                if (field.getFieldCode().contains("xddate")) {
-                    Node startNode = field.getStart();
-                    Node endNode = field.getEnd();
-
-                    // 生成书签
-                    DocumentBuilder builder = new DocumentBuilder(doc);
-                    BookmarkStart bookmarkStart = builder.startBookmark("dtag_xydate");
-                    BookmarkEnd bookmarkEnd = builder.endBookmark("dtag_xydate");
-                    // 在域的位置插入书签
-                    startNode.getParentNode().insertBefore(bookmarkStart, startNode);
-                    endNode.getParentNode().insertAfter(bookmarkEnd, endNode);
-
-                    // 删除域，这里域和“{{xddate}}”都被删除了
-                    field.remove();
-                    break;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 第一页最后的日期会被上面的框框遮挡住，需要将标题上面的段落删除几行，日期段落向下移动几行，并在日期后面加上分页符
-     */
-    static void solveDateHideProblem(Document doc) {
-        for (Section section : doc.getSections()) {
-            ParagraphCollection collection = section.getBody().getParagraphs();
-            int deleteParaNum = 0;
-            for (int i = 0; i < collection.getCount(); i++) {
-                Paragraph paragraph = collection.get(i);
-                // 删除标题之前的五个空段落
-                if (paragraph.getText().trim().length() == 0 && deleteParaNum < 5) {
-                    paragraph.remove();
-                    deleteParaNum++;
-                }
-
-                // 找到日期段落
-                if (paragraph.getText().contains("月")) {
-                    // 在日期段落前面插入两个空段落
-                    Paragraph newParagraph1 = new Paragraph(doc);
-                    Paragraph newParagraph2 = new Paragraph(doc);
-                    collection.insert(i, newParagraph1);
-                    collection.insert(i, newParagraph2);
-
-                    // 在日期段落的下一段落添加分页符
-                    DocumentBuilder builder = new DocumentBuilder(doc);
-                    builder.moveTo(paragraph.getNextSibling());
-                    builder.insertBreak(BreakType.PAGE_BREAK);
-                    return;
                 }
             }
         }

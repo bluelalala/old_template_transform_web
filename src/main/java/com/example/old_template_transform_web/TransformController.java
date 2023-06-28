@@ -29,8 +29,8 @@ public class TransformController {
     }
 
     @ResponseBody
-    @RequestMapping(value = "/upload")
-    public ResponseResult upload(@RequestParam("file_upload") MultipartFile[] files) throws IOException {
+    @RequestMapping(value = "/upload1")
+    public ResponseResult upload1(@RequestParam("file_upload") MultipartFile[] files) throws IOException {
         // 新模板输出文件夹
         String basePath = System.getProperty("user.dir") + File.separator + "newTemplates";
         Date date = new Date();
@@ -47,9 +47,40 @@ public class TransformController {
             if (file.isEmpty()) {
                 return ResponseResult.fail(file.getOriginalFilename() + "文件为空！");
             }
-            byte[] bytes = TransformUtil.procCustomDocument(file.getInputStream());
+            byte[] bytes = TransformUtil1.procCustomDocument(file.getInputStream());
             String path = datePath + File.separator + file.getOriginalFilename() + "x";
-            TransformUtil.procEditAbleRange(bytes, path);
+            TransformUtil1.procEditAbleRange(bytes, path);
+
+            Map<String, String> map = new HashMap<>();
+            map.put("name", file.getOriginalFilename() + "x");
+            map.put("folder", dateFormat.format(date));
+            list.add(map);
+        }
+        return ResponseResult.success(list);
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/upload2")
+    public ResponseResult upload2(@RequestParam("file_upload") MultipartFile[] files) throws IOException {
+        // 新模板输出文件夹
+        String basePath = System.getProperty("user.dir") + File.separator + "newTemplates";
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-hh-mm-ss");
+        String datePath = basePath + File.separator + dateFormat.format(date);
+        File dateFile = new File(datePath);
+        if (!dateFile.exists()) {
+            dateFile.mkdirs();
+        }
+
+        List<Map<String, String>> list = new ArrayList<>();
+        for (int i = 0; i < files.length; i++) {
+            MultipartFile file = files[i];
+            if (file.isEmpty()) {
+                return ResponseResult.fail(file.getOriginalFilename() + "文件为空！");
+            }
+            byte[] bytes = TransformUtil2.procCustomDocument(file.getInputStream());
+            String path = datePath + File.separator + file.getOriginalFilename() + "x";
+            TransformUtil2.procEditAbleRange(bytes, path);
 
             Map<String, String> map = new HashMap<>();
             map.put("name", file.getOriginalFilename() + "x");

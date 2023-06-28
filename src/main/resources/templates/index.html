@@ -7,38 +7,65 @@
 </head>
 
 <body style="text-align:center;margin-top:100px;">
-<h1>老模板转换工具</h1>
-<a href="javascript:;" id="clickUpload" class="clickUpload" style="margin-top:20px;">
-    <form id="uploadfiles" enctype="multipart/form-data">
-        <input type="file" multiple="multiple" id="file_upload" name="file_upload" accept="application/msword"/>
-    </form>
-    选择文件
-</a>
-<div class="showFileName" style="margin-top:15px;"></div>
-<button id="upload" class="upload" onclick="upload()" style="margin-top:15px;">上传</button>
-<div id="div" style="margin-top:20px;width:400px;margin:0 auto;"></div>
-<div id="loader" class="loader"></div>
+
+<div style="float:left;width:50%;">
+    <h1>一网通办老模板转换工具</h1>
+    <a href="javascript:;" id="clickUpload1" class="clickUpload" style="margin-top:20px;">
+        <form id="uploadfiles1" enctype="multipart/form-data">
+            <input type="file" multiple="multiple" id="file_upload1" name="file_upload" accept="application/msword"/>
+        </form>
+        选择文件
+    </a>
+    <div class="showFileName1" style="margin-top:15px;"></div>
+    <button id="upload1" class="upload" onclick="upload1()" style="margin-top:15px;">上传</button>
+    <div id="div1" style="margin-top:20px;width:400px;margin:0 auto;"></div>
+    <div id="loader1" class="loader"></div>
+</div>
+
+<div style="float:right;width:50%;">
+    <h1>智慧住建老模板转换工具</h1>
+    <a href="javascript:;" id="clickUpload2" class="clickUpload" style="margin-top:20px;">
+        <form id="uploadfiles2" enctype="multipart/form-data">
+            <input type="file" multiple="multiple" id="file_upload2" name="file_upload" accept="application/msword"/>
+        </form>
+        选择文件
+    </a>
+    <div class="showFileName2" style="margin-top:15px;"></div>
+    <button id="upload2" class="upload" onclick="upload2()" style="margin-top:15px;">上传</button>
+    <div id="div2" style="margin-top:20px;width:400px;margin:0 auto;"></div>
+    <div id="loader2" class="loader"></div>
+</div>
 
 <script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
 <script type="text/javascript">
     // 上传按钮的点击事件
-    $(".clickUpload").on("change", "input[type='file']", function () {
-        var files = document.getElementById("file_upload").files;
+    $("#clickUpload1").on("change", "input[type='file']", function () {
+        var files = document.getElementById("file_upload1").files;
         var fileNameAll = "";
         for (var i = 0; i < files.length; i++) {
             fileNameAll += files[i].name + "    ";
         }
-        $(".showFileName").html(fileNameAll);
+        $(".showFileName1").html(fileNameAll);
     })
 
-    function upload() {
-        $("#loader").css("display", "block");
-        $('#div').empty();
+    // 上传按钮的点击事件
+    $("#clickUpload2").on("change", "input[type='file']", function () {
+        var files = document.getElementById("file_upload2").files;
+        var fileNameAll = "";
+        for (var i = 0; i < files.length; i++) {
+            fileNameAll += files[i].name + "    ";
+        }
+        $(".showFileName2").html(fileNameAll);
+    })
 
-        var formData = new FormData($("#uploadfiles")[0]);
+    function upload1() {
+        $("#loader1").css("display", "block");
+        $('#div1').empty();
+
+        var formData = new FormData($("#uploadfiles1")[0]);
         $.ajax({
             type: "post",
-            url: "/transform/upload",
+            url: "/transform/upload1",
             dataType: "json",
             data: formData,
             // 必须false才会自动加上正确的Content-Type
@@ -47,20 +74,55 @@
             // XMLHttpRequest会对formdata进行正确的处理
             processData: false,
             success: function (data) {
-                $("#loader").css("display", "none");
+                $("#loader1").css("display", "none");
                 if (data.success == true) {
                     var list = data.data;
                     for (var i = 0; i < list.length; i++) {
                         var str = `<div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;"><div>${list[i].name}` +
                             `</div><button class="download" onclick="download('${list[i].name}', '${list[i].folder}')">下载</button></div>`;
-                        $('#div').append(str);
+                        $('#div1').append(str);
+                    }
+                } else {
+                    // alert(data.errorMsg);
+                }
+            },
+            error: function (error) {
+                $("#loader1").css("display", "none");
+                alert(error);
+            }
+        });
+    }
+
+    function upload2() {
+        $("#loader2").css("display", "block");
+        $('#div2').empty();
+
+        var formData = new FormData($("#uploadfiles2")[0]);
+        $.ajax({
+            type: "post",
+            url: "/transform/upload2",
+            dataType: "json",
+            data: formData,
+            // 必须false才会自动加上正确的Content-Type
+            contentType: false,
+            // 必须false才会避开jQuery对formdata的默认处理
+            // XMLHttpRequest会对formdata进行正确的处理
+            processData: false,
+            success: function (data) {
+                $("#loader2").css("display", "none");
+                if (data.success == true) {
+                    var list = data.data;
+                    for (var i = 0; i < list.length; i++) {
+                        var str = `<div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;"><div>${list[i].name}` +
+                            `</div><button class="download" onclick="download('${list[i].name}', '${list[i].folder}')">下载</button></div>`;
+                        $('#div2').append(str);
                     }
                 } else {
                     alert(data.errorMsg);
                 }
             },
             error: function (error) {
-                $("#loader").css("display", "none");
+                $("#loader2").css("display", "none");
                 alert(error);
             }
         });
@@ -160,13 +222,21 @@
     }
 
     @-webkit-keyframes spin {
-        0% { -webkit-transform: rotate(0deg); }
-        100% { -webkit-transform: rotate(360deg); }
+        0% {
+            -webkit-transform: rotate(0deg);
+        }
+        100% {
+            -webkit-transform: rotate(360deg);
+        }
     }
 
     @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
     }
 </style>
 
